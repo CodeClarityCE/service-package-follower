@@ -1,0 +1,27 @@
+services:
+  service-package-follower:
+    build:
+      context: ../../backend
+      dockerfile: services/packageFollower/.cloud/docker/Dockerfile
+      target: plugin-dev
+      args:
+        - PLUGINNAME=packageFollower
+        - KIND=services
+    image: ceherzog/service-package-follower-dev:latest
+    restart: always
+    volumes:
+      - ../../backend:/codeclarity
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      db:
+        condition: service_started
+      pg_bouncer:
+        condition: service_started
+      adminer:
+        condition: service_started
+    env_file:
+      - ../../.cloud/env/.env.dev
+
+volumes:
+  projects:

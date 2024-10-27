@@ -1,0 +1,8 @@
+services:
+  service-package-follower:
+    # For dev we keep the golang container and install devtools
+    build:
+      target: plugin-debug
+    image: ceherzog/service-package-follower-debug:latest
+    ports:
+      - 40000:40000
