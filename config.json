@@ -2,6 +2,5 @@
     "name": "package-follower",
     "version": "v0.0.2-alpha",
     "image_name": "codeclarityce/service-package-follower",
-    "image_version": "0.0.2",
     "depends_on": []
 }
