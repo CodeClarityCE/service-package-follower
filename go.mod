@@ -3,7 +3,7 @@ module github.com/CodeClarityCE/service-package-follower
 go 1.24.3
 
 require (
-	github.com/CodeClarityCE/service-knowledge v0.0.8-alpha
+	github.com/CodeClarityCE/service-knowledge v0.0.9-alpha
 	github.com/CodeClarityCE/utility-dbhelper v0.0.4-alpha
 	github.com/CodeClarityCE/utility-types v0.0.6-alpha
 	github.com/rabbitmq/amqp091-go v1.10.0
