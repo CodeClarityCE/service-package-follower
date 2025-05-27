@@ -3,7 +3,7 @@ module github.com/CodeClarityCE/service-package-follower
 go 1.24.3
 
 require (
-	github.com/CodeClarityCE/service-knowledge v0.0.10-alpha
+	github.com/CodeClarityCE/service-knowledge v0.0.12-alpha
 	github.com/CodeClarityCE/utility-dbhelper v0.0.5-alpha
 	github.com/CodeClarityCE/utility-types v0.0.6-alpha
 	github.com/rabbitmq/amqp091-go v1.10.0
@@ -13,7 +13,7 @@ require (
 )
 
 require (
-	github.com/CodeClarityCE/utility-node-semver v0.0.3-alpha // indirect
+	github.com/CodeClarityCE/utility-node-semver v0.0.4-alpha // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
