@@ -3,13 +3,13 @@ module github.com/CodeClarityCE/service-package-follower
 go 1.24.3
 
 require (
-	github.com/CodeClarityCE/service-knowledge v0.0.14-alpha
-	github.com/CodeClarityCE/utility-dbhelper v0.0.7-alpha
-	github.com/CodeClarityCE/utility-types v0.0.10-alpha
+	github.com/CodeClarityCE/service-knowledge v0.0.16-alpha
+	github.com/CodeClarityCE/utility-dbhelper v0.0.8-alpha
+	github.com/CodeClarityCE/utility-types v0.0.11-alpha
 	github.com/rabbitmq/amqp091-go v1.10.0
-	github.com/uptrace/bun v1.2.14
-	github.com/uptrace/bun/dialect/pgdialect v1.2.14
-	github.com/uptrace/bun/driver/pgdriver v1.2.14
+	github.com/uptrace/bun v1.2.15
+	github.com/uptrace/bun/dialect/pgdialect v1.2.15
+	github.com/uptrace/bun/driver/pgdriver v1.2.15
 )
 
 require (
@@ -26,8 +26,8 @@ require (
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.opentelemetry.io/otel v1.37.0 // indirect
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
-	golang.org/x/crypto v0.39.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/term v0.32.0 // indirect
+	golang.org/x/crypto v0.40.0 // indirect
+	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/term v0.33.0 // indirect
 	mellium.im/sasl v0.3.2 // indirect
 )
