@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/CodeClarityCE/service-knowledge/src/mirrors/js"
+	"github.com/CodeClarityCE/service-knowledge/src/mirrors/php"
 	dbhelper "github.com/CodeClarityCE/utility-dbhelper/helper"
 	types_amqp "github.com/CodeClarityCE/utility-types/amqp"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
@@ -136,8 +137,18 @@ func receiveMessage(connection string) {
 				log.Printf("%v", err)
 			}
 
-			// Start the update
-			js.ImportList(db_knowledge, apiMessage.PackagesNames)
+			// Start the update based on language
+			switch apiMessage.Language {
+			case "php":
+				log.Printf("Importing %d PHP packages", len(apiMessage.PackagesNames))
+				php.ImportList(db_knowledge, apiMessage.PackagesNames)
+			case "javascript", "":
+				// Default to JavaScript for backward compatibility (empty language field)
+				log.Printf("Importing %d JavaScript packages", len(apiMessage.PackagesNames))
+				js.ImportList(db_knowledge, apiMessage.PackagesNames)
+			default:
+				log.Printf("Unknown language: %s, skipping package import", apiMessage.Language)
+			}
 
 			err = db_codeclarity.RunInTx(context.Background(), &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
 				// Retrieve analysis document
