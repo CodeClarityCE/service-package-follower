@@ -137,17 +137,30 @@ func receiveMessage(connection string) {
 				log.Printf("%v", err)
 			}
 
-			// Start the update based on language
+			// Start the update based on language with batch processing
+			log.Printf("📦 PACKAGE FOLLOWER: Processing %d %s packages for analysis %s", 
+				len(apiMessage.PackagesNames), apiMessage.Language, apiMessage.AnalysisId.String()[:8])
+			
 			switch apiMessage.Language {
 			case "php":
-				log.Printf("Importing %d PHP packages", len(apiMessage.PackagesNames))
-				php.ImportList(db_knowledge, apiMessage.PackagesNames)
+				err := php.ImportListWithBatching(db_knowledge, apiMessage.PackagesNames)
+				if err != nil {
+					log.Printf("⚠️  PHP batch import failed, using individual processing: %v", err)
+					php.ImportList(db_knowledge, apiMessage.PackagesNames)
+				} else {
+					log.Printf("✅ PHP batch import completed successfully")
+				}
 			case "javascript", "":
 				// Default to JavaScript for backward compatibility (empty language field)
-				log.Printf("Importing %d JavaScript packages", len(apiMessage.PackagesNames))
-				js.ImportList(db_knowledge, apiMessage.PackagesNames)
+				err := js.ImportListWithBatching(db_knowledge, apiMessage.PackagesNames)
+				if err != nil {
+					log.Printf("⚠️  JavaScript batch import failed, using individual processing: %v", err)
+					js.ImportList(db_knowledge, apiMessage.PackagesNames)
+				} else {
+					log.Printf("✅ JavaScript batch import completed successfully")
+				}
 			default:
-				log.Printf("Unknown language: %s, skipping package import", apiMessage.Language)
+				log.Printf("❌ Unknown language: %s, skipping package import", apiMessage.Language)
 			}
 
 			err = db_codeclarity.RunInTx(context.Background(), &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
@@ -165,10 +178,10 @@ func receiveMessage(connection string) {
 				log.Printf("%v", err)
 			}
 
-			// Print time elapsed
-			t := time.Now()
-			elapsed := t.Sub(start)
-			log.Println(elapsed)
+			// Print time elapsed and completion status
+			elapsed := time.Since(start)
+			log.Printf("🏁 PACKAGE FOLLOWER: Completed processing for analysis %s in %v", 
+				apiMessage.AnalysisId.String()[:8], elapsed)
 		}
 	}()
 
