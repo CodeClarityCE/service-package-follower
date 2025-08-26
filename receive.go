@@ -9,8 +9,8 @@ import (
 
 	"github.com/CodeClarityCE/service-knowledge/src/mirrors/js"
 	"github.com/CodeClarityCE/service-knowledge/src/mirrors/php"
-	"github.com/CodeClarityCE/utility-types/boilerplates"
 	types_amqp "github.com/CodeClarityCE/utility-types/amqp"
+	"github.com/CodeClarityCE/utility-types/boilerplates"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/uptrace/bun"
@@ -46,9 +46,9 @@ func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 	}
 
 	// Start the update based on language with batch processing
-	log.Printf("📦 PACKAGE FOLLOWER: Processing %d %s packages for analysis %s", 
+	log.Printf("📦 PACKAGE FOLLOWER: Processing %d %s packages for analysis %s",
 		len(apiMessage.PackagesNames), apiMessage.Language, apiMessage.AnalysisId.String()[:8])
-	
+
 	switch apiMessage.Language {
 	case "php":
 		err := php.ImportListWithBatching(db.Knowledge, apiMessage.PackagesNames)
@@ -88,6 +88,6 @@ func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 
 	// Print time elapsed and completion status
 	elapsed := time.Since(start)
-	log.Printf("🏁 PACKAGE FOLLOWER: Completed processing for analysis %s in %v", 
+	log.Printf("🏁 PACKAGE FOLLOWER: Completed processing for analysis %s in %v",
 		apiMessage.AnalysisId.String()[:8], elapsed)
 }
