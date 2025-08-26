@@ -9,8 +9,8 @@ import (
 
 	"github.com/CodeClarityCE/service-knowledge/src/mirrors/js"
 	"github.com/CodeClarityCE/service-knowledge/src/mirrors/php"
+	"github.com/CodeClarityCE/utility-boilerplates"
 	types_amqp "github.com/CodeClarityCE/utility-types/amqp"
-	"github.com/CodeClarityCE/utility-types/boilerplates"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/uptrace/bun"
