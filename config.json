@@ -1,6 +1,6 @@
 {
     "name": "package-follower",
-    "version": "v0.0.18-alpha",
+    "version": "v0.0.19-alpha",
     "image_name": "codeclarityce/service-package-follower",
     "depends_on": []
 }
