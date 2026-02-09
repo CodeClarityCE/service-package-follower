@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	amqp_helper "github.com/CodeClarityCE/utility-amqp-helper"
 	"github.com/CodeClarityCE/service-knowledge/src/mirrors/js"
 	"github.com/CodeClarityCE/service-knowledge/src/mirrors/php"
 	"github.com/CodeClarityCE/utility-boilerplates"
@@ -84,6 +85,20 @@ func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 	})
 	if err != nil {
 		log.Printf("%v", err)
+	}
+
+	// Notify dispatcher that the knowledge DB update is complete.
+	// This re-triggers the plugins_dispatcher handler so the dispatcher
+	// can advance to the next stage without polling.
+	notification := types_amqp.PluginDispatcherMessage{
+		AnalysisId: apiMessage.AnalysisId,
+		Plugin:     "packageFollower",
+	}
+	notifData, err := json.Marshal(notification)
+	if err != nil {
+		log.Printf("Failed to marshal dispatcher notification: %v", err)
+	} else {
+		amqp_helper.Send("plugins_dispatcher", notifData)
 	}
 
 	// Print time elapsed and completion status
