@@ -5,17 +5,17 @@ ARG USERNAME=codeclarity
 ARG PLUGINNAME=plugin
 
 # DEV IMAGE
-FROM golang:1.25.7-alpine AS plugin-dev
+FROM golang:1.26.0-alpine AS plugin-dev
 ARG KIND
 ARG PLUGINNAME
 WORKDIR /codeclarity/${KIND}/${PLUGINNAME}
 ADD .cloud/docker/config/* /root
 RUN apk add git
-RUN go install github.com/air-verse/air@v1.63.0
+RUN go install github.com/air-verse/air@v1.64.5
 CMD ["air", "-c", ".air.toml"]
 
 # DEBUG IMAGE
-FROM golang:1.25.7-alpine AS plugin-debug
+FROM golang:1.26.0-alpine AS plugin-debug
 ARG KIND
 ARG PLUGINNAME
 ENV KIND=${KIND}
@@ -29,7 +29,7 @@ CMD ["/go/bin/dlv", "debug", ".", "--headless", "--listen=:40000", "--accept-mul
 
 
 # BUILD IMAGE
-FROM golang:1.25.7-alpine AS plugin-build
+FROM golang:1.26.0-alpine AS plugin-build
 ARG KIND
 ARG PLUGINNAME
 COPY . /codeclarity/${KIND}/${PLUGINNAME}
