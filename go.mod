@@ -3,24 +3,22 @@ module github.com/CodeClarityCE/service-package-follower
 go 1.27.3
 
 require (
-	github.com/CodeClarityCE/service-knowledge v0.0.25-alpha
-	github.com/CodeClarityCE/utility-amqp-helper v0.0.12-alpha
-	github.com/CodeClarityCE/utility-boilerplates v0.0.7-alpha
-	github.com/CodeClarityCE/utility-types v0.0.19-alpha
+	github.com/CodeClarityCE/service-knowledge v0.0.26-alpha
+	github.com/CodeClarityCE/utility-amqp-helper v0.0.13-alpha
+	github.com/CodeClarityCE/utility-boilerplates v0.0.8-alpha
+	github.com/CodeClarityCE/utility-types v0.0.20-alpha
 	github.com/rabbitmq/amqp091-go v1.15.0
 	github.com/uptrace/bun v1.2.18
 )
 
 require (
-	github.com/CodeClarityCE/utility-dbhelper v0.0.15-alpha // indirect
-	github.com/CodeClarityCE/utility-node-semver v0.0.8-alpha // indirect
+	github.com/CodeClarityCE/utility-dbhelper v0.0.16-alpha // indirect
+	github.com/CodeClarityCE/utility-node-semver v0.0.9-alpha // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/lib/pq v1.12.3 // indirect
-	github.com/mattn/go-runewidth v0.0.30 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/prometheus/client_golang v1.24.1 // indirect
