@@ -2,20 +2,47 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"log"
 	"time"
 
-	amqp_helper "github.com/CodeClarityCE/utility-amqp-helper"
 	"github.com/CodeClarityCE/service-knowledge/src/mirrors/js"
 	"github.com/CodeClarityCE/service-knowledge/src/mirrors/php"
+	amqp_helper "github.com/CodeClarityCE/utility-amqp-helper"
 	"github.com/CodeClarityCE/utility-boilerplates"
 	types_amqp "github.com/CodeClarityCE/utility-types/amqp"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
+	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/uptrace/bun"
 )
+
+// updateStartedKey is the Config key the dispatcher's reaper reads to time a stuck update.
+const updateStartedKey = "package_follower_started_on"
+
+// markUpdateStarted sets updating_db and records when the update began.
+// A single UPDATE locks the row, so an analysis that already ended stays ended.
+func markUpdateStarted(ctx context.Context, db bun.IDB, analysisId uuid.UUID, began time.Time) error {
+	terminal := []codeclarity.AnalysisStatus{codeclarity.COMPLETED, codeclarity.FAILURE, codeclarity.CANCELLED}
+	_, err := db.NewUpdate().Model((*codeclarity.Analysis)(nil)).
+		Set("status = ?", codeclarity.UPDATING_DB).
+		Set("config = jsonb_set(COALESCE(config, '{}'::jsonb), '{"+updateStartedKey+"}', to_jsonb(?::text))", began.Format(time.RFC3339Nano)).
+		Where("id = ?", analysisId).
+		Where("status NOT IN (?)", bun.In(terminal)).
+		Exec(ctx)
+	return err
+}
+
+// markUpdateFinished moves the analysis back to ongoing, only if still updating.
+// A single UPDATE locks the row and leaves every other column alone.
+func markUpdateFinished(ctx context.Context, db bun.IDB, analysisId uuid.UUID) error {
+	_, err := db.NewUpdate().Model((*codeclarity.Analysis)(nil)).
+		Set("status = ?", codeclarity.ONGOING).
+		Where("id = ?", analysisId).
+		Where("status = ?", codeclarity.UPDATING_DB).
+		Exec(ctx)
+	return err
+}
 
 // dispatch handles package following messages using ServiceBase databases
 func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
@@ -26,23 +53,7 @@ func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 
 	var err error
 
-	// Update analysis status to UPDATING_DB
-	analysis_document := codeclarity.Analysis{
-		Id: apiMessage.AnalysisId,
-	}
-
-	err = db.CodeClarity.RunInTx(context.Background(), &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
-		// Retrieve analysis document
-		err := tx.NewSelect().Model(&analysis_document).WherePK().Scan(ctx)
-		if err != nil {
-			return err
-		}
-		analysis_document.Status = codeclarity.UPDATING_DB
-		// Update analysis document
-		_, err = tx.NewUpdate().Model(&analysis_document).WherePK().Exec(ctx)
-		return err
-	})
-	if err != nil {
+	if err = markUpdateStarted(context.Background(), db.CodeClarity, apiMessage.AnalysisId, time.Now()); err != nil {
 		log.Printf("%v", err)
 	}
 
@@ -72,18 +83,7 @@ func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 		log.Printf("❌ Unknown language: %s, skipping package import", apiMessage.Language)
 	}
 
-	err = db.CodeClarity.RunInTx(context.Background(), &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
-		// Retrieve analysis document
-		err := tx.NewSelect().Model(&analysis_document).WherePK().Scan(ctx)
-		if err != nil {
-			return err
-		}
-		analysis_document.Status = codeclarity.ONGOING
-		// Update analysis document
-		_, err = tx.NewUpdate().Model(&analysis_document).WherePK().Exec(ctx)
-		return err
-	})
-	if err != nil {
+	if err = markUpdateFinished(context.Background(), db.CodeClarity, apiMessage.AnalysisId); err != nil {
 		log.Printf("%v", err)
 	}
 
