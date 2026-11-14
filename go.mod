@@ -1,6 +1,6 @@
 module github.com/CodeClarityCE/service-package-follower
 
-go 1.27.3
+go 1.27.4
 
 require (
 	github.com/CodeClarityCE/service-knowledge v0.0.26-alpha
