@@ -1,5 +1,5 @@
-github.com/CodeClarityCE/service-knowledge v0.0.28-alpha h1:pGDWanAayylt3Tk+huZQ+kaJJHZKst/Y086PTvvHiFc=
-github.com/CodeClarityCE/service-knowledge v0.0.28-alpha/go.mod h1:oDxHLlnP1858Ar3NMVytDLIO3YzGdXMzy1mVQ1uXEWM=
+github.com/CodeClarityCE/service-knowledge v0.0.29-alpha h1:nRBRL4O+e8c0p5/YdzH2VtxJrpCyCH9dER5/ojKZ5Yk=
+github.com/CodeClarityCE/service-knowledge v0.0.29-alpha/go.mod h1:oDxHLlnP1858Ar3NMVytDLIO3YzGdXMzy1mVQ1uXEWM=
 github.com/CodeClarityCE/utility-amqp-helper v0.0.15-alpha h1:U6W0Izq0GjbGMVbhEzEvuCUwNJEQ85kL0Ci0WIuzcfc=
 github.com/CodeClarityCE/utility-amqp-helper v0.0.15-alpha/go.mod h1:CYK/RMeOl5lJNSqPy6MHo9rZd5D18ktQiFJlhR5uTTg=
 github.com/CodeClarityCE/utility-boilerplates v0.0.10-alpha h1:cqOqJ1v6bUQeHypfxy5BhKvqV3nYOG4bnnOOWmp6Rqs=
