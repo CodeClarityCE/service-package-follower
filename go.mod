@@ -3,10 +3,10 @@ module github.com/CodeClarityCE/service-package-follower
 go 1.27.4
 
 require (
-	github.com/CodeClarityCE/service-knowledge v0.0.30-alpha
-	github.com/CodeClarityCE/utility-amqp-helper v0.0.16-alpha
-	github.com/CodeClarityCE/utility-boilerplates v0.0.12-alpha
-	github.com/CodeClarityCE/utility-types v0.0.23-alpha
+	github.com/CodeClarityCE/service-knowledge v0.0.32-alpha
+	github.com/CodeClarityCE/utility-amqp-helper v0.0.18-alpha
+	github.com/CodeClarityCE/utility-boilerplates v0.0.14-alpha
+	github.com/CodeClarityCE/utility-types v0.0.25-alpha
 	github.com/google/uuid v1.6.0
 	github.com/rabbitmq/amqp091-go v1.16.0
 	github.com/uptrace/bun v1.2.18
@@ -14,7 +14,7 @@ require (
 )
 
 require (
-	github.com/CodeClarityCE/utility-dbhelper v0.0.19-alpha // indirect
+	github.com/CodeClarityCE/utility-dbhelper v0.0.21-alpha // indirect
 	github.com/CodeClarityCE/utility-node-semver v0.0.12-alpha // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
