@@ -2,3 +2,6 @@ dispatcher
 .netrc
 tmp
 .DS_Store
+
+# Local go build output
+/service-package-follower
