@@ -14,6 +14,7 @@ import (
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/sirupsen/logrus"
 	"github.com/uptrace/bun"
 )
 
@@ -50,7 +51,7 @@ func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 
 	var apiMessage types_amqp.SbomPackageFollowerMessage
 	if err := json.Unmarshal(d.Body, &apiMessage); err != nil {
-		log.Printf("bad package follower message, dropping: %v", err)
+		logrus.WithError(err).Warn("Dropping a malformed package follower message")
 		return
 	}
 
@@ -70,7 +71,7 @@ func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 		if err != nil {
 			log.Printf("⚠️  PHP batch import failed, using individual processing: %v", err)
 			if err := php.ImportList(db.Knowledge, apiMessage.PackagesNames); err != nil {
-				log.Printf("PHP individual import failed: %v", err)
+				logrus.WithError(err).WithField("analysis_id", apiMessage.AnalysisId.String()).Error("PHP individual import failed")
 			}
 		} else {
 			log.Printf("✅ PHP batch import completed successfully")
@@ -81,7 +82,7 @@ func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 		if err != nil {
 			log.Printf("⚠️  JavaScript batch import failed, using individual processing: %v", err)
 			if err := js.ImportList(db.Knowledge, apiMessage.PackagesNames); err != nil {
-				log.Printf("JavaScript individual import failed: %v", err)
+				logrus.WithError(err).WithField("analysis_id", apiMessage.AnalysisId.String()).Error("JavaScript individual import failed")
 			}
 		} else {
 			log.Printf("✅ JavaScript batch import completed successfully")
