@@ -28,7 +28,7 @@ func markUpdateStarted(ctx context.Context, db bun.IDB, analysisId uuid.UUID, be
 		Set("status = ?", codeclarity.UPDATING_DB).
 		Set("config = jsonb_set(COALESCE(config, '{}'::jsonb), '{"+updateStartedKey+"}', to_jsonb(?::text))", began.Format(time.RFC3339Nano)).
 		Where("id = ?", analysisId).
-		Where("status NOT IN (?)", bun.In(terminal)).
+		Where("status NOT IN (?)", bun.List(terminal)).
 		Exec(ctx)
 	return err
 }
@@ -49,7 +49,10 @@ func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 	start := time.Now()
 
 	var apiMessage types_amqp.SbomPackageFollowerMessage
-	json.Unmarshal([]byte(d.Body), &apiMessage)
+	if err := json.Unmarshal(d.Body, &apiMessage); err != nil {
+		log.Printf("bad package follower message, dropping: %v", err)
+		return
+	}
 
 	var err error
 
@@ -66,7 +69,9 @@ func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 		err := php.ImportListWithBatching(db.Knowledge, apiMessage.PackagesNames)
 		if err != nil {
 			log.Printf("⚠️  PHP batch import failed, using individual processing: %v", err)
-			php.ImportList(db.Knowledge, apiMessage.PackagesNames)
+			if err := php.ImportList(db.Knowledge, apiMessage.PackagesNames); err != nil {
+				log.Printf("PHP individual import failed: %v", err)
+			}
 		} else {
 			log.Printf("✅ PHP batch import completed successfully")
 		}
@@ -75,7 +80,9 @@ func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 		err := js.ImportListWithBatching(db.Knowledge, apiMessage.PackagesNames)
 		if err != nil {
 			log.Printf("⚠️  JavaScript batch import failed, using individual processing: %v", err)
-			js.ImportList(db.Knowledge, apiMessage.PackagesNames)
+			if err := js.ImportList(db.Knowledge, apiMessage.PackagesNames); err != nil {
+				log.Printf("JavaScript individual import failed: %v", err)
+			}
 		} else {
 			log.Printf("✅ JavaScript batch import completed successfully")
 		}
