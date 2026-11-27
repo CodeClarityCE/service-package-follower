@@ -36,26 +36,42 @@ func recordingDB(queries *[]string) *bun.DB {
 	return bun.NewDB(sql.OpenDB(recordingConnector{queries}), pgdialect.New())
 }
 
-func TestFinishingAnUpdateWritesOnlyStatusWhileStillUpdating(t *testing.T) {
+func TestFinishingAnUpdateRecordsTheImportAsDone(t *testing.T) {
 	var queries []string
 	db := recordingDB(&queries)
 	defer db.Close()
 
-	if err := markUpdateFinished(context.Background(), db, uuid.New()); err != nil {
+	finished := time.Date(2026, 11, 27, 9, 30, 0, 0, time.UTC)
+	if err := markPackageImportDone(context.Background(), db, uuid.New(), "php", finished); err != nil {
 		t.Fatal(err)
 	}
 	if len(queries) != 1 {
 		t.Fatalf("expected one write, got %v", queries)
 	}
 	query := queries[0]
-	if !strings.Contains(query, `SET status = 'ongoing'`) {
-		t.Errorf("does not set the status: %s", query)
+	for _, want := range []string{"package_imports_done", "'php'", "2026-11-27T09:30:00Z"} {
+		if !strings.Contains(query, want) {
+			t.Errorf("missing %s in: %s", want, query)
+		}
 	}
-	if strings.Contains(query, "steps") || strings.Contains(query, "config") {
-		t.Errorf("must write only the status: %s", query)
+	if !strings.Contains(query, "CASE WHEN status = 'updating_db' THEN 'ongoing' ELSE status END") {
+		t.Errorf("must resume only an analysis still updating: %s", query)
 	}
-	if !strings.Contains(query, "status = 'updating_db'") {
-		t.Errorf("must only apply while still updating: %s", query)
+	for _, terminal := range []string{"'completed'", "'failure'", "'cancelled'"} {
+		if !strings.Contains(query, terminal) {
+			t.Errorf("must spare %s analyses: %s", terminal, query)
+		}
+	}
+	if strings.Contains(query, "steps") {
+		t.Errorf("must not rewrite steps: %s", query)
+	}
+}
+
+func TestAnEmptyLanguageIsJavaScript(t *testing.T) {
+	for language, want := range map[string]string{"": "javascript", "javascript": "javascript", "php": "php"} {
+		if got := importedLanguage(language); got != want {
+			t.Errorf("importedLanguage(%q) = %q, want %q", language, got, want)
+		}
 	}
 }
 
