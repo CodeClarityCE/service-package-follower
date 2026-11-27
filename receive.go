@@ -34,13 +34,27 @@ func markUpdateStarted(ctx context.Context, db bun.IDB, analysisId uuid.UUID, be
 	return err
 }
 
-// markUpdateFinished moves the analysis back to ongoing, only if still updating.
-// A single UPDATE locks the row and leaves every other column alone.
-func markUpdateFinished(ctx context.Context, db bun.IDB, analysisId uuid.UUID) error {
+// packageImportDoneKey is the Config key the dispatcher reads, per language, before it
+// starts the plugins that depend on an SBOM.
+const packageImportDoneKey = "package_imports_done"
+
+// importedLanguage names the language of an import; an empty one is JavaScript.
+func importedLanguage(language string) string {
+	if language == "" {
+		return "javascript"
+	}
+	return language
+}
+
+// markPackageImportDone records the language's import as done and resumes an updating analysis.
+// One UPDATE locks the row, so an analysis that already ended stays ended.
+func markPackageImportDone(ctx context.Context, db bun.IDB, analysisId uuid.UUID, language string, finished time.Time) error {
+	terminal := []codeclarity.AnalysisStatus{codeclarity.COMPLETED, codeclarity.FAILURE, codeclarity.CANCELLED}
 	_, err := db.NewUpdate().Model((*codeclarity.Analysis)(nil)).
-		Set("status = ?", codeclarity.ONGOING).
+		Set("status = CASE WHEN status = ? THEN ? ELSE status END", codeclarity.UPDATING_DB, codeclarity.ONGOING).
+		Set("config = jsonb_set(COALESCE(config, '{}'::jsonb), '{"+packageImportDoneKey+"}', COALESCE(config->'"+packageImportDoneKey+"', '{}'::jsonb) || jsonb_build_object(?::text, ?::text))", language, finished.Format(time.RFC3339Nano)).
 		Where("id = ?", analysisId).
-		Where("status = ?", codeclarity.UPDATING_DB).
+		Where("status NOT IN (?)", bun.List(terminal)).
 		Exec(ctx)
 	return err
 }
@@ -91,8 +105,9 @@ func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 		log.Printf("❌ Unknown language: %s, skipping package import", apiMessage.Language)
 	}
 
-	if err = markUpdateFinished(context.Background(), db.CodeClarity, apiMessage.AnalysisId); err != nil {
-		log.Printf("%v", err)
+	// The dispatcher starts the finders only once this is recorded, so record it after the import.
+	if err = markPackageImportDone(context.Background(), db.CodeClarity, apiMessage.AnalysisId, importedLanguage(apiMessage.Language), time.Now()); err != nil {
+		logrus.WithError(err).WithField("analysis_id", apiMessage.AnalysisId.String()).Error("Could not record the package import as done")
 	}
 
 	// Notify dispatcher that the knowledge DB update is complete.
