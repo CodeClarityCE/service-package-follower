@@ -59,19 +59,16 @@ func markPackageImportDone(ctx context.Context, db bun.IDB, analysisId uuid.UUID
 	return err
 }
 
-// importer fetches a language's packages into the knowledge database, in batches or one at a time.
-type importer struct {
-	batch func(*bun.DB, []string) error
-	each  func(*bun.DB, []string) error
-}
+// importer fetches a language's packages into the knowledge database and returns what it could not store.
+type importer func(*bun.DB, []string) error
 
 // registryImporters are the languages whose registries the follower imports from.
 var registryImporters = map[string]importer{
-	"javascript": {batch: js.ImportListWithBatching, each: js.ImportList},
-	"php":        {batch: php.ImportListWithBatching, each: php.ImportList},
+	"javascript": js.ImportListWithBatching,
+	"php":        php.ImportListWithBatching,
 }
 
-// importPackages imports the packages of an analysis, retrying one at a time when the batch fails.
+// importPackages imports the packages of an analysis.
 // A failure only logs: the analysis carries on with the rows that exist.
 func importPackages(db *bun.DB, importers map[string]importer, language string, names []string, analysisId uuid.UUID) {
 	language = importedLanguage(language)
@@ -80,16 +77,14 @@ func importPackages(db *bun.DB, importers map[string]importer, language string, 
 		"language":    language,
 		"packages":    len(names),
 	})
-	imp, ok := importers[language]
+	importList, ok := importers[language]
 	if !ok {
 		logger.Warn("Skipping the package import of an unknown language")
 		return
 	}
-	if err := imp.batch(db, names); err != nil {
-		logger.WithError(err).Error("Package metadata import failed, retrying one package at a time")
-		if err := imp.each(db, names); err != nil {
-			logger.WithError(err).Error("Package metadata import failed one package at a time")
-		}
+	logger.Info("Importing package metadata")
+	if err := importList(db, names); err != nil {
+		logger.WithError(err).Error("Package metadata import failed")
 		return
 	}
 	logger.Info("Package metadata imported")
@@ -110,10 +105,6 @@ func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 	if err = markUpdateStarted(context.Background(), db.CodeClarity, apiMessage.AnalysisId, time.Now()); err != nil {
 		logrus.WithError(err).WithField("analysis_id", apiMessage.AnalysisId.String()).Error("Could not record the package import as started")
 	}
-
-	// Start the update based on language with batch processing
-	log.Printf("📦 PACKAGE FOLLOWER: Processing %d %s packages for analysis %s",
-		len(apiMessage.PackagesNames), apiMessage.Language, apiMessage.AnalysisId.String()[:8])
 
 	importPackages(db.Knowledge, registryImporters, apiMessage.Language, apiMessage.PackagesNames, apiMessage.AnalysisId)
 

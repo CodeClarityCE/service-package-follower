@@ -10,66 +10,47 @@ import (
 	"github.com/uptrace/bun"
 )
 
-func failing(err error) func(*bun.DB, []string) error {
+func failing(err error) importer {
 	return func(*bun.DB, []string) error { return err }
 }
 
-func succeeding(called *[]string) func(*bun.DB, []string) error {
+func succeeding(called *[]string) importer {
 	return func(_ *bun.DB, names []string) error {
 		*called = append(*called, names...)
 		return nil
 	}
 }
 
-func TestAFailedBatchImportIsLoggedAsAnErrorWithTheAnalysis(t *testing.T) {
-	hook := test.NewGlobal()
-	defer hook.Reset()
-	analysis := uuid.New()
-	var retried []string
-	importers := map[string]importer{
-		"javascript": {batch: failing(errors.New("permission denied for table package")), each: succeeding(&retried)},
-	}
-
-	importPackages(nil, importers, "javascript", []string{"left-pad"}, analysis)
-
-	var found *logrus.Entry
+// levelEntries returns the logged entries at level.
+func levelEntries(hook *test.Hook, level logrus.Level) []*logrus.Entry {
+	var found []*logrus.Entry
 	for _, entry := range hook.AllEntries() {
-		if entry.Level == logrus.ErrorLevel {
-			found = entry
+		if entry.Level == level {
+			found = append(found, entry)
 		}
 	}
-	if found == nil {
-		t.Fatalf("no error logged, got %v", hook.AllEntries())
-	}
-	if found.Data["analysis_id"] != analysis.String() || found.Data["language"] != "javascript" {
-		t.Errorf("error must name the analysis and language: %v", found.Data)
-	}
-	if err, _ := found.Data[logrus.ErrorKey].(error); err == nil || err.Error() != "permission denied for table package" {
-		t.Errorf("error must carry the cause: %v", found.Data)
-	}
-	if len(retried) != 1 {
-		t.Errorf("must retry the packages one at a time, got %v", retried)
-	}
+	return found
 }
 
-func TestAFailedRetryIsLoggedAsAnErrorWithTheAnalysis(t *testing.T) {
+func TestAFailedImportIsLoggedAsAnErrorWithTheAnalysis(t *testing.T) {
 	hook := test.NewGlobal()
 	defer hook.Reset()
 	analysis := uuid.New()
 	importers := map[string]importer{
-		"php": {batch: failing(errors.New("batch broke")), each: failing(errors.New("retry broke"))},
+		"php": failing(errors.New("1 of 1 PHP packages were not imported, the first: permission denied for table package")),
 	}
 
 	importPackages(nil, importers, "php", []string{"monolog/monolog"}, analysis)
 
-	errorsLogged := 0
-	for _, entry := range hook.AllEntries() {
-		if entry.Level == logrus.ErrorLevel && entry.Data["analysis_id"] == analysis.String() {
-			errorsLogged++
-		}
+	logged := levelEntries(hook, logrus.ErrorLevel)
+	if len(logged) != 1 {
+		t.Fatalf("expected one error, got %v", hook.AllEntries())
 	}
-	if errorsLogged != 2 {
-		t.Errorf("expected the batch and the retry failures as errors, got %v", hook.AllEntries())
+	if logged[0].Data["analysis_id"] != analysis.String() || logged[0].Data["language"] != "php" || logged[0].Data["packages"] != 1 {
+		t.Errorf("error must name the analysis, language and package count: %v", logged[0].Data)
+	}
+	if err, _ := logged[0].Data[logrus.ErrorKey].(error); err == nil || err.Error() != "1 of 1 PHP packages were not imported, the first: permission denied for table package" {
+		t.Errorf("error must carry the cause: %v", logged[0].Data)
 	}
 }
 
@@ -77,9 +58,7 @@ func TestAnEmptyLanguageImportsJavaScriptWithoutAnError(t *testing.T) {
 	hook := test.NewGlobal()
 	defer hook.Reset()
 	var imported []string
-	importers := map[string]importer{
-		"javascript": {batch: succeeding(&imported), each: failing(errors.New("not called"))},
-	}
+	importers := map[string]importer{"javascript": succeeding(&imported)}
 
 	importPackages(nil, importers, "", []string{"ms"}, uuid.New())
 
