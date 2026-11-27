@@ -9,6 +9,9 @@ services:
         - KIND=services
     image: codeclarityce/service-package-follower-dev:latest
     restart: always
+    # The follower runs as its own role, like production; `compose exec` sessions (the knowledge
+    # update and the dump's completeness gate) keep the stack's postgres login.
+    command: ["env", "PG_DB_USER=cc_follower", "air", "-c", ".air.toml"]
     volumes:
       - ../../backend:/codeclarity
     depends_on:
