@@ -103,7 +103,7 @@ func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 	var err error
 
 	if err = markUpdateStarted(context.Background(), db.CodeClarity, apiMessage.AnalysisId, time.Now()); err != nil {
-		logrus.WithError(err).WithField("analysis_id", apiMessage.AnalysisId.String()).Error("Could not record the package import as started")
+		logrus.WithError(err).WithField("analysis_id", apiMessage.AnalysisId.String()).Error("Could not record the package import start")
 	}
 
 	importPackages(db.Knowledge, registryImporters, apiMessage.Language, apiMessage.PackagesNames, apiMessage.AnalysisId)
