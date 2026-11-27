@@ -72,7 +72,7 @@ func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 	var err error
 
 	if err = markUpdateStarted(context.Background(), db.CodeClarity, apiMessage.AnalysisId, time.Now()); err != nil {
-		log.Printf("%v", err)
+		logrus.WithError(err).WithField("analysis_id", apiMessage.AnalysisId.String()).Error("Could not record the package import start")
 	}
 
 	// Start the update based on language with batch processing
