@@ -59,6 +59,37 @@ func markPackageImportDone(ctx context.Context, db bun.IDB, analysisId uuid.UUID
 	return err
 }
 
+// importer fetches a language's packages into the knowledge database and returns what it could not store.
+type importer func(*bun.DB, []string) error
+
+// registryImporters are the languages whose registries the follower imports from.
+var registryImporters = map[string]importer{
+	"javascript": js.ImportListWithBatching,
+	"php":        php.ImportListWithBatching,
+}
+
+// importPackages imports the packages of an analysis.
+// A failure only logs: the analysis carries on with the rows that exist.
+func importPackages(db *bun.DB, importers map[string]importer, language string, names []string, analysisId uuid.UUID) {
+	language = importedLanguage(language)
+	logger := logrus.WithFields(logrus.Fields{
+		"analysis_id": analysisId.String(),
+		"language":    language,
+		"packages":    len(names),
+	})
+	importList, ok := importers[language]
+	if !ok {
+		logger.Warn("Skipping the package import of an unknown language")
+		return
+	}
+	logger.Info("Importing package metadata")
+	if err := importList(db, names); err != nil {
+		logger.WithError(err).Error("Package metadata import failed")
+		return
+	}
+	logger.Info("Package metadata imported")
+}
+
 // dispatch handles package following messages using ServiceBase databases
 func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 	start := time.Now()
@@ -75,35 +106,7 @@ func dispatch(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 		logrus.WithError(err).WithField("analysis_id", apiMessage.AnalysisId.String()).Error("Could not record the package import start")
 	}
 
-	// Start the update based on language with batch processing
-	log.Printf("📦 PACKAGE FOLLOWER: Processing %d %s packages for analysis %s",
-		len(apiMessage.PackagesNames), apiMessage.Language, apiMessage.AnalysisId.String()[:8])
-
-	switch apiMessage.Language {
-	case "php":
-		err := php.ImportListWithBatching(db.Knowledge, apiMessage.PackagesNames)
-		if err != nil {
-			log.Printf("⚠️  PHP batch import failed, using individual processing: %v", err)
-			if err := php.ImportList(db.Knowledge, apiMessage.PackagesNames); err != nil {
-				logrus.WithError(err).WithField("analysis_id", apiMessage.AnalysisId.String()).Error("PHP individual import failed")
-			}
-		} else {
-			log.Printf("✅ PHP batch import completed successfully")
-		}
-	case "javascript", "":
-		// Default to JavaScript for backward compatibility (empty language field)
-		err := js.ImportListWithBatching(db.Knowledge, apiMessage.PackagesNames)
-		if err != nil {
-			log.Printf("⚠️  JavaScript batch import failed, using individual processing: %v", err)
-			if err := js.ImportList(db.Knowledge, apiMessage.PackagesNames); err != nil {
-				logrus.WithError(err).WithField("analysis_id", apiMessage.AnalysisId.String()).Error("JavaScript individual import failed")
-			}
-		} else {
-			log.Printf("✅ JavaScript batch import completed successfully")
-		}
-	default:
-		log.Printf("❌ Unknown language: %s, skipping package import", apiMessage.Language)
-	}
+	importPackages(db.Knowledge, registryImporters, apiMessage.Language, apiMessage.PackagesNames, apiMessage.AnalysisId)
 
 	// The dispatcher starts the finders only once this is recorded, so record it after the import.
 	if err = markPackageImportDone(context.Background(), db.CodeClarity, apiMessage.AnalysisId, importedLanguage(apiMessage.Language), time.Now()); err != nil {
